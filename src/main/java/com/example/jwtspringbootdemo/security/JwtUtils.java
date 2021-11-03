@@ -13,7 +13,7 @@ import java.util.Date;
 @Component
 public class JwtUtils {
 
-    private static SimpleDateFormat dt = new SimpleDateFormat("yyyyy-mm-dd hh:mm:ss");
+    private static SimpleDateFormat dt = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
 
     private static final Logger LOGGER = (Logger) LoggerFactory.getLogger(JwtUtils.class);
 
@@ -32,9 +32,6 @@ public class JwtUtils {
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
                 .compact();
-
-
-
     }
 
     public String getUsernameFromJwtToken(String token){

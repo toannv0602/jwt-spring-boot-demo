@@ -41,4 +41,10 @@ public class User {
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
     }
+
+    public User(String username, String email, String password){
+        this.username = username;
+        this.password = password;
+        this.email = email;
+    }
 }
