@@ -9,6 +9,7 @@ import com.example.jwtspringbootdemo.entity.Role;
 import com.example.jwtspringbootdemo.entity.User;
 import com.example.jwtspringbootdemo.responsitory.RoleRespository;
 import com.example.jwtspringbootdemo.responsitory.UserReponsitory;
+import com.example.jwtspringbootdemo.security.AuthTokenFilter;
 import com.example.jwtspringbootdemo.security.JwtUtils;
 import com.example.jwtspringbootdemo.security.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +24,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api")
 public class AuthController {
 
     @Autowired
@@ -45,9 +47,12 @@ public class AuthController {
     PasswordEncoder passwordEncoder;
 
     @Autowired
+    AuthTokenFilter authTokenFilter;
+
+    @Autowired
     JwtUtils jwtUtils;
 
-    @PostMapping("/signin")
+    @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Validated @RequestBody LoginRequest loginRequest){
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
@@ -57,12 +62,19 @@ public class AuthController {
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
+//        List<String> roles = userDetails.getAuthorities().stream()
+//                .map(item -> item.getAuthority())
+//                .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles));
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmail()));
 
+    }
+
+    @GetMapping("/auth/hello")
+    public ResponseEntity<?> hello(HttpServletRequest request){
+        String token = authTokenFilter.parseJwt(request);
+        String username = jwtUtils.getUsernameFromJwtToken(token);
+        return  ResponseEntity.ok(new MessageResponse("Call api success! User name: "+ username));
     }
 
     @PostMapping("/signup")
@@ -73,35 +85,35 @@ public class AuthController {
 
         }
         User user = new User(signupRequest.getUsername(), signupRequest.getEmail(), passwordEncoder.encode(signupRequest.getPassword()));
+//
+//        Set<String> strRoles = signupRequest.getRole();
+//        Set<Role> roles = new HashSet<>();
 
-        Set<String> strRoles = signupRequest.getRole();
-        Set<Role> roles = new HashSet<>();
-
-        if(strRoles == null){
-            Role userRole = roleRespository.findByName(EnumRole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
-            roles.add(userRole);
-        }else{
-            strRoles.forEach(role ->{
-                switch (role){
-                    case "admin":
-                        Role adminRole  = roleRespository.findByName(EnumRole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
-                        roles.add(adminRole);
-                        break;
-                    case "mod":
-                        Role modRole = roleRespository.findByName(EnumRole.ROLE_MODERATOR)
-                                .orElseThrow(()-> new RuntimeException("Error: Role is not found!"));
-                        roles.add(modRole);
-                        break;
-                    default:
-                        Role userRole = roleRespository.findByName(EnumRole.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
-                        roles.add(userRole);
-                }
-            });
-        }
-        user.setRoles(roles);
+//        if(strRoles == null){
+//            Role userRole = roleRespository.findByName(EnumRole.ROLE_USER)
+//                    .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
+//            roles.add(userRole);
+//        }else{
+//            strRoles.forEach(role ->{
+//                switch (role){
+//                    case "admin":
+//                        Role adminRole  = roleRespository.findByName(EnumRole.ROLE_ADMIN)
+//                                .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
+//                        roles.add(adminRole);
+//                        break;
+//                    case "mod":
+//                        Role modRole = roleRespository.findByName(EnumRole.ROLE_MODERATOR)
+//                                .orElseThrow(()-> new RuntimeException("Error: Role is not found!"));
+//                        roles.add(modRole);
+//                        break;
+//                    default:
+//                        Role userRole = roleRespository.findByName(EnumRole.ROLE_USER)
+//                                .orElseThrow(() -> new RuntimeException("Error: Role is not found!"));
+//                        roles.add(userRole);
+//                }
+//            });
+//        }
+//        user.setRoles(roles);
         userReponsitory.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
